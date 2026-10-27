@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+  --bg: #0f0f10;
+  --panel: #17181a;
+  --panel-2: #1d1e21;
+  --line: #2a2b2f;
+  --accent: #6366f1;
+}
+
+body {
+  background: var(--bg);
+  color: #f4f4f5;
+  font-family: "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+}

@@ -1,0 +1,9 @@
+git_version=$(git --version | awk '{print $3}')
+major=${git_version%%.*}
+rest=${git_version#*.}
+minor=${rest%%.*}
+if [ "$major" -gt 2 ] || { [ "$major" -eq 2 ] && [ "$minor" -ge 32 ]; }; then
+  pnpm lint-staged
+else
+  echo "[pre-commit] git $git_version < 2.32, skip lint-staged (upgrade git to enable pre-commit checks)"
+fi
