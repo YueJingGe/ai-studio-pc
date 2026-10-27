@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { CreateTaskInput } from "@ai-studio/contracts";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import type { Db } from "../db/client.js";
 import { models, tasks } from "../db/schema.js";
 import { computeCredit } from "../engine/credits.js";
@@ -63,7 +63,7 @@ export function tasksRoute(app: FastifyInstance, deps: TasksDeps): void {
   });
 
   app.get("/api/tasks", async () => {
-    const rows = deps.db.select().from(tasks).all();
+    const rows = deps.db.select().from(tasks).orderBy(desc(tasks.createdAt)).all();
     return { tasks: rows.map((r) => getTaskView(deps.db, r.id)).filter((v): v is NonNullable<typeof v> => v !== null) };
   });
 
