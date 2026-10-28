@@ -3,7 +3,7 @@ import { useState } from "react";
 import { api } from "../../services/api";
 import { useGenDraft } from "../../stores/genDraft";
 import { ModelSelect } from "./ModelSelect";
-import { ParamBar } from "./ParamBar";
+import { ParamPanel } from "./ParamPanel";
 import { RefImageUpload } from "./RefImageUpload";
 
 export function GenForm({ onCreated }: { onCreated: (taskId: string) => void }) {
@@ -46,17 +46,16 @@ export function GenForm({ onCreated }: { onCreated: (taskId: string) => void }) 
         onChange={(e) => draft.set({ prompt: e.target.value })}
         placeholder="输入你的要求，AI生成图片"
         aria-label="生成提示词"
-        className="min-h-40 flex-1 resize-none rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 text-sm outline-none placeholder:text-zinc-600 focus:border-zinc-600"
+        className="min-h-40 flex-1 resize-none bg-transparent p-1 text-sm text-zinc-100 outline-none placeholder:text-zinc-600"
       />
       {error ? <p className="text-xs text-red-400">{error}</p> : null}
-      <div className="flex items-center justify-between rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
-        <ParamBar model={model} />
-        <span className="text-xs text-zinc-500">{model ? `积分 ${model.price * draft.count}` : ""}</span>
+      <div className="mt-auto flex items-center gap-2">
+        <ParamPanel model={model} />
       </div>
       <button
         onClick={() => void submit()}
         disabled={!canSubmit}
-        className="rounded-xl bg-white py-3 text-sm font-medium text-black transition-opacity disabled:opacity-40"
+        className="rounded-xl bg-white py-3 text-sm font-medium text-black transition-opacity hover:opacity-90 disabled:bg-[var(--panel-2)] disabled:text-zinc-500 disabled:opacity-100"
       >
         {submitting ? "提交中…" : "立即生成"}
       </button>

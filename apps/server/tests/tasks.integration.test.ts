@@ -53,7 +53,7 @@ describe("tasks integration (mock provider)", () => {
     expect(created.statusCode).toBe(202);
     const task = (created.json() as { task: { id: string; status: string; credit: number } }).task;
     expect(task.status).toBe("pending");
-    expect(task.credit).toBe(2);
+    expect(task.credit).toBe(0); // 积分逻辑已移除
 
     // 轮询至终态
     let status = task.status;

@@ -30,5 +30,5 @@ test("图片生成全链路（mock provider）", async ({ page }) => {
   await expect(card).toBeVisible();
   await expect(card.getByText("已成功", { exact: true })).toBeVisible({ timeout: 15000 });
   await expect(card.getByRole("img").first()).toBeVisible();
-  await expect(card.getByText("积分 1")).toBeVisible();
+  await expect(card.getByRole("link", { name: "下载" })).toBeVisible();
 });

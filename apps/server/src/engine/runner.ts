@@ -34,8 +34,25 @@ export function getTaskView(db: Db, id: string): TaskView | null {
   return row ? rowToView(row) : null;
 }
 
-/** 任务执行：pending→running→(succeeded|failed)，成功时产出资产 */
+/** 任务执行：pending→running→(succeeded|failed)，成功时产出资产；任何异常都落 failed，绝不滞留 pending */
 export async function runTask(deps: RunnerDeps, taskId: string): Promise<void> {
+  try {
+    await runTaskInner(deps, taskId);
+  } catch (e) {
+    const { db, persist } = deps;
+    const row = db.select().from(tasks).where(eq(tasks.id, taskId)).all()[0];
+    if (row && !isTerminal(row.status as TaskView["status"])) {
+      assertTransition(row.status as TaskView["status"], "failed");
+      db.update(tasks)
+        .set({ status: "failed", error: e instanceof Error ? e.message : String(e), updatedAt: Date.now() })
+        .where(eq(tasks.id, taskId))
+        .run();
+      persist();
+    }
+  }
+}
+
+async function runTaskInner(deps: RunnerDeps, taskId: string): Promise<void> {
   const { db, provider } = deps;
   const row = db.select().from(tasks).where(eq(tasks.id, taskId)).all()[0];
   if (!row) throw new Error(`task not found: ${taskId}`);

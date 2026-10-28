@@ -4,7 +4,6 @@ import { CreateTaskInput } from "@ai-studio/contracts";
 import { desc, eq } from "drizzle-orm";
 import type { Db } from "../db/client.js";
 import { models, tasks } from "../db/schema.js";
-import { computeCredit } from "../engine/credits.js";
 import type { InProcessQueue } from "../engine/queue.js";
 import { getTaskView, runTask } from "../engine/runner.js";
 import type { ProviderAdapter } from "../providers/base.js";
@@ -38,7 +37,7 @@ export function tasksRoute(app: FastifyInstance, deps: TasksDeps): void {
     }
     const now = Date.now();
     const id = randomUUID();
-    const credit = computeCredit(model.price, input.params.count);
+    const credit = 0; // 积分逻辑已按需求移除（P2 再议）
     deps.db
       .insert(tasks)
       .values({
