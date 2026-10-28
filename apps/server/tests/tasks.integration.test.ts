@@ -89,3 +89,56 @@ describe("tasks integration (mock provider)", () => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 });
+
+describe("runner 异常兜底", () => {
+  it("provider submit 抛异常时任务落 failed，不滞留 pending", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "aistudio-fail-"));
+    const dbFile = path.join(dir, "studio.db");
+    const { db, persist } = await createDb(dbFile);
+    db.insert(models)
+      .values({
+        modelKey: "m-fail",
+        name: "fail model",
+        type: "image",
+        desc: "t",
+        tag: null,
+        price: 1,
+        capabilitiesJson: JSON.stringify({ supportsPrompt: true, requiresInputs: [] }),
+        paramsJson: JSON.stringify({ sizes: ["1K"], ratios: ["1:1"], maxCount: 1 }),
+      })
+      .run();
+
+    const env = { PORT: 0, HOST: "127.0.0.1", PROVIDER: "mock", DATA_DIR: dir, STORAGE_DIR: path.join(dir, "storage") } as const;
+    const throwing = {
+      name: "throwing",
+      submit: async () => {
+        throw new Error("Model not exist");
+      },
+      poll: async () => ({ status: "pending" as const }),
+    };
+    const app = await buildApp({
+      env: { ...env } as never,
+      db,
+      provider: throwing,
+      queue: new InProcessQueue(2),
+      persist,
+    });
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/tasks",
+      payload: { modelKey: "m-fail", prompt: "x", params: { size: "1K", ratio: "1:1", count: 1 } },
+    });
+    const id = (created.json() as { task: { id: string } }).task.id;
+    let status = "pending";
+    for (let i = 0; i < 20 && status === "pending"; i += 1) {
+      await sleep(100);
+      const res = await app.inject({ method: "GET", url: `/api/tasks/${id}` });
+      const t = (res.json() as { task: { status: string; error: string | null } }).task;
+      status = t.status;
+      if (status === "failed") expect(t.error).toContain("Model not exist");
+    }
+    expect(status).toBe("failed");
+    await app.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+});
