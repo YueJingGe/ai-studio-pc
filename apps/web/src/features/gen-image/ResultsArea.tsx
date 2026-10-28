@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { TERMINAL_STATUSES, type TaskView } from "@ai-studio/contracts";
 import { useState } from "react";
+import { ConfirmDialog } from "../../components/ConfirmDialog";
 import clsx from "clsx";
 import { EmptyState } from "../../components/EmptyState";
 import { backoffInterval } from "../../hooks/useTaskQuery";
@@ -11,6 +12,7 @@ type Filter = "all" | "video" | "image";
 
 export function ResultsArea({ onEdit }: { onEdit: (task: TaskView) => void }) {
   const [filter, setFilter] = useState<Filter>("all");
+  const [pendingDelete, setPendingDelete] = useState<TaskView | null>(null);
   const queryClient = useQueryClient();
 
   const { data: modelsData } = useQuery({ queryKey: ["models"], queryFn: () => api.models() });
@@ -69,10 +71,22 @@ export function ResultsArea({ onEdit }: { onEdit: (task: TaskView) => void }) {
       ) : (
         <div className="space-y-4 px-6 pb-8">
           {tasks.map((t) => (
-            <TaskCard key={t.id} task={t} model={modelOf(t)} onRegenerate={(x) => void resubmit(x)} onEdit={onEdit} onDelete={(x) => void removeTask(x)} />
+            <TaskCard key={t.id} task={t} model={modelOf(t)} onRegenerate={(x) => void resubmit(x)} onEdit={onEdit} onDelete={(x) => setPendingDelete(x)} />
           ))}
         </div>
       )}
+      {pendingDelete ? (
+        <ConfirmDialog
+          title="删除该生成任务？"
+          description="删除后任务与其产出的资产将一并移除，且不可恢复。"
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={() => {
+            const t = pendingDelete;
+            setPendingDelete(null);
+            void removeTask(t);
+          }}
+        />
+      ) : null}
     </section>
   );
 }

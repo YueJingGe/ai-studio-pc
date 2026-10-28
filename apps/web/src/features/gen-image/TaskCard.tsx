@@ -51,6 +51,18 @@ export function TaskCard({ task, model, onRegenerate, onEdit, onDelete }: TaskCa
         <span className="shrink-0 text-xs text-zinc-500">{model?.name ?? task.modelKey}</span>
         <span className="shrink-0 text-xs text-zinc-500">{task.params.ratio}</span>
         <span className="shrink-0 text-xs text-zinc-500">{task.params.size}</span>
+        <span
+          className={clsx(
+            "shrink-0 rounded px-2 py-0.5 text-xs",
+            task.status === "succeeded"
+              ? "bg-emerald-500/20 text-emerald-300"
+              : task.status === "failed"
+                ? "bg-red-500/20 text-red-300"
+                : "bg-zinc-500/20 text-zinc-300",
+          )}
+        >
+          {STATUS_LABEL[task.status]}
+        </span>
         <span className="ml-auto shrink-0 text-xs text-zinc-500">{fmtDate(task.createdAt)} | AI生成</span>
       </header>
 
@@ -95,18 +107,6 @@ export function TaskCard({ task, model, onRegenerate, onEdit, onDelete }: TaskCa
       ) : null}
 
       <div className="mt-3 flex items-center gap-2">
-        <span
-          className={clsx(
-            "rounded px-2 py-0.5 text-xs",
-            task.status === "succeeded"
-              ? "bg-emerald-500/20 text-emerald-300"
-              : task.status === "failed"
-                ? "bg-red-500/20 text-red-300"
-                : "bg-zinc-500/20 text-zinc-300",
-          )}
-        >
-          {STATUS_LABEL[task.status]}
-        </span>
         {onRegenerate ? (
           <button onClick={() => onRegenerate(task)} className="flex items-center gap-1.5 rounded-lg bg-[var(--panel-2)] px-3 py-2 text-sm text-zinc-200 hover:text-white">
             <RefreshCw size={14} /> 再次生成

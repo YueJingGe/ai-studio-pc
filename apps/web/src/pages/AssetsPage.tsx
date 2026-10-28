@@ -3,6 +3,7 @@ import type { AssetView } from "@ai-studio/contracts";
 import { Download, Trash2 } from "lucide-react";
 import { useState } from "react";
 import clsx from "clsx";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { EmptyState } from "../components/EmptyState";
 import { api } from "../services/api";
 
@@ -27,6 +28,7 @@ function dayLabel(ts: number): string {
 
 export default function AssetsPage() {
   const [filter, setFilter] = useState<Filter>("image");
+  const [pendingDelete, setPendingDelete] = useState<AssetView | null>(null);
   const queryClient = useQueryClient();
   const { data } = useQuery({ queryKey: ["assets"], queryFn: () => api.assets() });
 
@@ -73,7 +75,7 @@ export default function AssetsPage() {
                       <a href={a.url} download className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-zinc-200 hover:bg-[var(--panel-2)]">
                         <Download size={15} /> 下载
                       </a>
-                      <button onClick={() => void remove(a)} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-red-400 hover:bg-red-500/10">
+                      <button onClick={() => setPendingDelete(a)} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-red-400 hover:bg-red-500/10">
                         <Trash2 size={15} /> 删除
                       </button>
                     </div>
@@ -85,6 +87,18 @@ export default function AssetsPage() {
           <p className="py-4 text-center text-xs text-zinc-600">—— 没有更多数据了 ——</p>
         </div>
       )}
+      {pendingDelete ? (
+        <ConfirmDialog
+          title="删除该资产？"
+          description="删除后不可恢复；若该文件无其他引用将一并清理。"
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={() => {
+            const a = pendingDelete;
+            setPendingDelete(null);
+            void remove(a);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

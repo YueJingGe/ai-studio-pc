@@ -34,5 +34,6 @@ test("图片生成全链路（mock provider）", async ({ page }) => {
 
   // 删除功能：任务卡与资产同时消失
   await card.getByLabel("删除").click();
+  await page.getByRole("dialog", { name: "删除该生成任务？" }).getByRole("button", { name: "确认删除" }).click();
   await expect(card).toHaveCount(0);
 });
