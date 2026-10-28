@@ -8,6 +8,9 @@ const EnvSchema = z
     DATA_DIR: z.string().default("./data"),
     STORAGE_DIR: z.string().default("./storage"),
     DASHSCOPE_API_KEY: z.string().min(1).optional(),
+    DASHSCOPE_IMAGE_MODEL: z.string().default("qwen-image"),
+    CASSETTE_MODE: z.enum(["off", "record", "replay"]).default("off"),
+    CASSETTE_DIR: z.string().default("./cassettes"),
     LANGFUSE_PUBLIC_KEY: z.string().optional(),
     LANGFUSE_SECRET_KEY: z.string().optional(),
   })

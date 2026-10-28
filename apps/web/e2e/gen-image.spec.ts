@@ -1,6 +1,16 @@
 import { expect, test } from "@playwright/test";
 
 test("图片生成全链路（mock provider）", async ({ page }) => {
+  // 冷启动竞态防护：先等 server 就绪再进页面
+  await expect
+    .poll(async () => {
+      try {
+        return (await page.request.get("http://127.0.0.1:8787/api/health")).ok();
+      } catch {
+        return false;
+      }
+    }, { timeout: 30000 })
+    .toBe(true);
   await page.goto("/gen");
 
   // 模型选择器加载注册表

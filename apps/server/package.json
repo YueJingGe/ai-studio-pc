@@ -8,7 +8,8 @@
     "seed": "tsx src/db/seed.ts",
     "reset": "tsx src/db/reset.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "record:cassette": "tsx scripts/record-dashscope.ts"
   },
   "dependencies": {
     "@ai-studio/contracts": "workspace:*",

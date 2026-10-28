@@ -8,7 +8,13 @@ export function getProvider(env: Env): ProviderAdapter {
     case "mock":
       return new MockProvider();
     case "dashscope":
-      return new DashScopeProvider(env.DASHSCOPE_API_KEY ?? "");
+      return new DashScopeProvider({
+        apiKey: env.DASHSCOPE_API_KEY ?? "",
+        storageDir: env.STORAGE_DIR,
+        cassetteDir: env.CASSETTE_DIR,
+        cassetteMode: env.CASSETTE_MODE,
+        model: env.DASHSCOPE_IMAGE_MODEL,
+      });
     case "comfyui":
       throw new Error("ComfyUIProvider 预留（P3 接本机 ComfyUI /prompt）");
   }
