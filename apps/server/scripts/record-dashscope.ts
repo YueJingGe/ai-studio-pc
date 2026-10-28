@@ -15,6 +15,7 @@ async function main() {
     cassetteDir: env.CASSETTE_DIR,
     cassetteMode: "record",
     model: env.DASHSCOPE_IMAGE_MODEL,
+    baseUrl: env.DASHSCOPE_BASE_URL,
   });
   const ref = await provider.submit({ ...CASSETTE_INPUT });
   console.log("[record] submitted:", ref.ref);

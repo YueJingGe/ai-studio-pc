@@ -14,6 +14,7 @@ export function getProvider(env: Env): ProviderAdapter {
         cassetteDir: env.CASSETTE_DIR,
         cassetteMode: env.CASSETTE_MODE,
         model: env.DASHSCOPE_IMAGE_MODEL,
+        baseUrl: env.DASHSCOPE_BASE_URL,
       });
     case "comfyui":
       throw new Error("ComfyUIProvider 预留（P3 接本机 ComfyUI /prompt）");

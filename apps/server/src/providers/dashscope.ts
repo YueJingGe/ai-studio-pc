@@ -4,8 +4,6 @@ import type { CreateTaskInput } from "@ai-studio/contracts";
 import type { ProviderAdapter, ProviderPollResult, ProviderRef } from "./base.js";
 import { Cassette, type CassetteMode } from "./cassette.js";
 
-const BASE = "https://dashscope.aliyuncs.com";
-
 export interface DashScopeOptions {
   apiKey: string;
   storageDir: string;
@@ -13,6 +11,8 @@ export interface DashScopeOptions {
   cassetteMode: CassetteMode;
   /** 模型 ID，百炼控制台模型广场可查（默认 qwen-image） */
   model?: string;
+  /** 网关域名；控制台示例若给专属域名可覆盖 */
+  baseUrl?: string;
 }
 
 interface RefPayload {
@@ -65,7 +65,7 @@ export class DashScopeProvider implements ProviderAdapter {
       if (!entry || entry.response.json === undefined) throw new Error(`cassette miss: ${method} ${apiPath} (${key})`);
       return { status: entry.response.status, json: entry.response.json as T };
     }
-    const res = await fetch(BASE + apiPath, {
+    const res = await fetch(`${this.opts.baseUrl ?? "https://dashscope.aliyuncs.com"}${apiPath}`, {
       method,
       headers: {
         Authorization: `Bearer ${this.opts.apiKey}`,
