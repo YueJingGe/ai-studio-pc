@@ -1,6 +1,6 @@
 # ai-studio-pc
 
-某 AI 创作平台核心链路的最小复刻 demo（学习项目）：模型路由 + 异步任务状态机 + 资产入库。
+千问创作（create.qianwen.com）核心链路的最小复刻 demo：模型路由 + 异步任务状态机 + 资产入库。
 
 ## Quickstart
 ```bash
