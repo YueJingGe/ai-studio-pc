@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import type { TaskView } from "@ai-studio/contracts";
 import type { Db } from "../db/client.js";
-import { assets, tasks } from "../db/schema.js";
+import { assets, models, tasks } from "../db/schema.js";
 import type { ProviderAdapter, ProviderRef } from "../providers/base.js";
 import { assertTransition, isTerminal } from "./stateMachine.js";
 
@@ -91,8 +91,8 @@ async function runTaskInner(deps: RunnerDeps, taskId: string): Promise<void> {
         .set({ status: "succeeded", outputsJson: JSON.stringify(result.outputs), error: null, updatedAt: now })
         .where(eq(tasks.id, taskId))
         .run();
-      const modelRow = db.select().from(tasks).where(eq(tasks.id, taskId)).all()[0];
-      const modelType = modelRow?.modelKey.startsWith("wan") ? "video" : "image";
+      const modelRow = db.select().from(models).where(eq(models.modelKey, row.modelKey)).all()[0];
+      const modelType = modelRow?.type === "video" ? "video" : "image";
       result.outputs.forEach((url, i) => {
         db.insert(assets)
           .values({
