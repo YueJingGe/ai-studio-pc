@@ -17,7 +17,9 @@ export interface DashScopeOptions {
 
 interface RefPayload {
   taskId: string;
-  remoteTaskId: string;
+  remoteTaskId: string | null;
+  /** 同步模式直接带回的输出 */
+  outputs?: string[];
 }
 
 /** size(1K/2K) × ratio → qwen-image 像素（16 的倍数，边长 ≤2048） */
@@ -43,6 +45,7 @@ interface PollResponse {
     code?: string;
   };
   code?: string;
+  message?: string;
 }
 
 /**
@@ -58,8 +61,8 @@ export class DashScopeProvider implements ProviderAdapter {
     this.cassette = new Cassette(opts.cassetteDir, opts.cassetteMode);
   }
 
-  private async apiJson<T>(method: "GET" | "POST", apiPath: string, body?: unknown): Promise<{ status: number; json: T }> {
-    const key = this.cassette.keyFor(method, apiPath, body ?? null);
+  private async apiJson<T>(method: "GET" | "POST", apiPath: string, body?: unknown, asyncHeader = true): Promise<{ status: number; json: T }> {
+    const key = this.cassette.keyFor(method, apiPath, { body: body ?? null, asyncHeader });
     if (this.cassette.mode === "replay") {
       const entry = this.cassette.find(key);
       if (!entry || entry.response.json === undefined) throw new Error(`cassette miss: ${method} ${apiPath} (${key})`);
@@ -70,15 +73,21 @@ export class DashScopeProvider implements ProviderAdapter {
       headers: {
         Authorization: `Bearer ${this.opts.apiKey}`,
         "Content-Type": "application/json",
-        ...(method === "POST" ? { "X-DashScope-Async": "enable" } : {}),
+        ...(method === "POST" && asyncHeader ? { "X-DashScope-Async": "enable" } : {}),
       },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
     const json = (await res.json()) as T;
     if (this.cassette.mode === "record") {
-      this.cassette.save({ key, request: { method, path: apiPath, body: body ?? null }, response: { status: res.status, json } });
+      this.cassette.save({ key, request: { method, path: apiPath, body: { body: body ?? null, asyncHeader } }, response: { status: res.status, json } });
     }
     return { status: res.status, json };
+  }
+
+  private extractImages(json: PollResponse): string[] {
+    return (json.output?.choices ?? [])
+      .map((c) => c.message?.content?.[0]?.image)
+      .filter((x): x is string => Boolean(x));
   }
 
   private async download(url: string, destName: string): Promise<string> {
@@ -102,10 +111,25 @@ export class DashScopeProvider implements ProviderAdapter {
     return `/static/generated/${destName}`;
   }
 
+  /** 本地 /static/ 参考图转 base64 data URI（百炼无法回访 localhost） */
+  private toDataUri(url: string): string {
+    if (url.startsWith("data:")) return url;
+    if (!url.startsWith("/static/")) return url; // 公网 URL 直传
+    const ext = path.extname(url).toLowerCase();
+    const mime = ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : ext === ".jpg" || ext === ".jpeg" ? "image/jpeg" : null;
+    if (!mime) throw new Error(`参考图仅支持 png/jpg/webp（收到 ${ext || "未知"} 格式）`);
+    const file = path.join(this.opts.storageDir, url.replace("/static/", ""));
+    return `data:${mime};base64,${fs.readFileSync(file).toString("base64")}`;
+  }
+
   async submit(input: CreateTaskInput & { taskId: string }): Promise<ProviderRef> {
+    const content: { text?: string; image?: string }[] = [];
+    for (const u of input.refImages ?? []) content.push({ image: this.toDataUri(u) });
+    if (input.prompt) content.push({ text: input.prompt });
+    if (content.length === 0) throw new Error("提示词与参考图至少提供一项");
     const body = {
       model: this.opts.model ?? "qwen-image",
-      input: { messages: [{ role: "user", content: [{ text: input.prompt }] }] },
+      input: { messages: [{ role: "user", content }] },
       parameters: {
         size: pixelsFor(input.params.size, input.params.ratio),
         n: input.params.count,
@@ -113,21 +137,37 @@ export class DashScopeProvider implements ProviderAdapter {
         seed: 42,
       },
     };
-    const { status, json } = await this.apiJson<SubmitResponse>(
-      "POST",
-      "/api/v1/services/aigc/multimodal-generation/generation",
-      body,
-    );
+    const path = "/api/v1/services/aigc/multimodal-generation/generation";
+    const { status, json } = await this.apiJson<SubmitResponse>("POST", path, body);
     const remoteTaskId = json.output?.task_id;
-    if (status !== 200 || !remoteTaskId) {
-      throw new Error(`dashscope submit 失败: ${json.code ?? status} ${json.message ?? ""}`.trim());
+    const msg = `${json.code ?? ""} ${json.message ?? ""}`;
+    // 账号/模型不支持异步时自动回退同步调用（qwen-image-3.0 双通道）
+    const asyncDenied = status !== 200 && /asynchronous/i.test(msg);
+    if (!asyncDenied && (status !== 200 || !remoteTaskId)) {
+      throw new Error(`dashscope submit 失败: ${msg}`.trim());
     }
-    const ref: RefPayload = { taskId: input.taskId, remoteTaskId };
+    if (asyncDenied) {
+      const sync = await this.apiJson<PollResponse>("POST", path, body, false);
+      const images = this.extractImages(sync.json);
+      if (sync.status !== 200 || images.length === 0) {
+        throw new Error(`dashscope 同步调用失败: ${sync.json.code ?? sync.status} ${sync.json.output?.message ?? sync.json.message ?? ""}`.trim());
+      }
+      const outputs: string[] = [];
+      for (let i = 0; i < images.length; i += 1) {
+        outputs.push(await this.download(images[i] as string, `${input.taskId}-${i}.png`));
+      }
+      const ref: RefPayload = { taskId: input.taskId, remoteTaskId: null, outputs };
+      return { provider: this.name, ref: JSON.stringify(ref) };
+    }
+    const ref: RefPayload = { taskId: input.taskId, remoteTaskId: remoteTaskId as string };
     return { provider: this.name, ref: JSON.stringify(ref) };
   }
 
   async poll(ref: ProviderRef): Promise<ProviderPollResult> {
-    const { taskId, remoteTaskId } = JSON.parse(ref.ref) as RefPayload;
+    const payload = JSON.parse(ref.ref) as RefPayload;
+    if (payload.outputs) return { status: "succeeded", outputs: payload.outputs };
+    const { taskId, remoteTaskId } = payload;
+    if (!remoteTaskId) return { status: "failed", error: "缺少远程任务 ID" };
     const { json } = await this.apiJson<PollResponse>("GET", `/api/v1/tasks/${remoteTaskId}`);
     const out = json.output;
     const st = out?.task_status;

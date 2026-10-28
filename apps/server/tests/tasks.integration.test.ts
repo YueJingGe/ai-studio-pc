@@ -82,6 +82,22 @@ describe("tasks integration (mock provider)", () => {
     const del404 = await app.inject({ method: "DELETE", url: `/api/tasks/${task.id}` });
     expect(del404.statusCode).toBe(404);
 
+    // 仅图输入（无 prompt）也应成功
+    const imgOnly = await app.inject({
+      method: "POST",
+      url: "/api/tasks",
+      payload: { modelKey: "qwen-image-mock", params: { size: "1K", ratio: "1:1", count: 1 }, refImages: ["/static/mock/mock-1.svg"] },
+    });
+    expect(imgOnly.statusCode).toBe(202);
+    // 空输入（无 prompt 无图）应 400
+    const empty = await app.inject({
+      method: "POST",
+      url: "/api/tasks",
+      payload: { modelKey: "qwen-image-mock", params: { size: "1K", ratio: "1:1", count: 1 } },
+    });
+    expect(empty.statusCode).toBe(400);
+
+
     // 校验失败信封
     const bad = await app.inject({ method: "POST", url: "/api/tasks", payload: { modelKey: "", prompt: "" } });
     expect(bad.statusCode).toBe(400);

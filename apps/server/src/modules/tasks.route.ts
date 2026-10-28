@@ -41,7 +41,14 @@ export function tasksRoute(app: FastifyInstance, deps: TasksDeps): void {
         details: parsed.error.issues,
       });
     }
-    const input = parsed.data;
+    const input = { ...parsed.data, prompt: parsed.data.prompt ?? "" };
+    if (!input.prompt.trim() && (input.refImages?.length ?? 0) === 0) {
+      return reply.status(400).send({
+        code: "EMPTY_INPUT",
+        message: "提示词与参考图至少提供一项",
+        requestId: request.id,
+      });
+    }
     const model = deps.db.select().from(models).where(eq(models.modelKey, input.modelKey)).all()[0];
     if (!model) {
       return reply.status(404).send({

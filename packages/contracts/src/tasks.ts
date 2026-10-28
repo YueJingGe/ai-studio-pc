@@ -14,7 +14,8 @@ export type TaskParams = z.infer<typeof TaskParams>;
 
 export const CreateTaskInput = z.object({
   modelKey: z.string().min(1),
-  prompt: z.string().min(1).max(2000),
+  /** 提示词；与参考图至少提供一项（支持仅图输入编辑） */
+  prompt: z.string().max(2000).optional(),
   params: TaskParams,
   refImages: z.array(z.string()).max(4).optional(),
 });

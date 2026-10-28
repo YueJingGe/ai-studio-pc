@@ -14,7 +14,7 @@ export function GenForm({ onCreated }: { onCreated: (taskId: string) => void }) 
   const [error, setError] = useState<string | null>(null);
 
   const model = (data?.models ?? []).find((m) => m.modelKey === draft.modelKey && m.type === "image");
-  const canSubmit = !!model && draft.prompt.trim().length > 0 && !submitting;
+  const canSubmit = !!model && (draft.prompt.trim().length > 0 || draft.refImages.length > 0) && !submitting;
 
   async function submit() {
     if (!canSubmit || !model) return;
@@ -23,7 +23,7 @@ export function GenForm({ onCreated }: { onCreated: (taskId: string) => void }) 
     try {
       const { task } = await api.createTask({
         modelKey: model.modelKey,
-        prompt: draft.prompt.trim(),
+        prompt: draft.prompt.trim() || undefined,
         params: { size: draft.size, ratio: draft.ratio, count: draft.count },
         refImages: draft.refImages.length > 0 ? draft.refImages : undefined,
       });
