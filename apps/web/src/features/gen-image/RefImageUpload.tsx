@@ -31,17 +31,15 @@ export function RefImageUpload() {
   return (
     <div className="rounded-xl bg-[var(--panel)] p-2">
       {refImages.length === 0 ? (
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          disabled={uploading}
-          className="grid h-28 w-full place-items-center rounded-lg border border-dashed border-[var(--line)] text-zinc-500 transition-colors hover:border-zinc-500 hover:text-zinc-200 disabled:opacity-50"
+        <label
+          htmlFor="ref-upload-input"
+          className="grid h-28 w-full cursor-pointer place-items-center rounded-lg border border-dashed border-[var(--line)] text-zinc-500 transition-colors hover:border-zinc-500 hover:text-zinc-200"
         >
           <span className="flex flex-col items-center gap-2 text-sm">
             <Plus size={18} />
             {uploading ? "上传中…" : "上传参考内容"}
           </span>
-        </button>
+        </label>
       ) : (
         <div className="flex flex-wrap gap-2">
           {refImages.map((url, i) => (
@@ -57,19 +55,17 @@ export function RefImageUpload() {
             </div>
           ))}
           {refImages.length < 4 ? (
-            <button
-              type="button"
+            <label
+              htmlFor="ref-upload-input"
               aria-label="添加参考图"
-              onClick={() => inputRef.current?.click()}
-              disabled={uploading}
-              className="grid h-20 w-20 place-items-center rounded-lg bg-[var(--panel-2)] text-zinc-400 transition-colors hover:text-white disabled:opacity-50"
+              className="grid h-20 w-20 cursor-pointer place-items-center rounded-lg bg-[var(--panel-2)] text-zinc-400 transition-colors hover:text-white"
             >
               <Plus size={18} />
-            </button>
+            </label>
           ) : null}
         </div>
       )}
-      <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" multiple hidden onChange={(e) => void onFiles(e.target.files)} />
+      <input id="ref-upload-input" ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" multiple className="sr-only" onChange={(e) => void onFiles(e.target.files)} />
       {uploading && refImages.length > 0 ? <p className="mt-1 px-1 text-xs text-zinc-500">上传中…</p> : null}
       {error ? <p className="mt-1 px-1 text-xs text-red-400">{error}</p> : null}
     </div>
