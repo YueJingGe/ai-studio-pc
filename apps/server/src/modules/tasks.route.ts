@@ -1,9 +1,11 @@
 import { randomUUID } from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import { CreateTaskInput } from "@ai-studio/contracts";
 import { desc, eq } from "drizzle-orm";
 import type { Db } from "../db/client.js";
-import { models, tasks } from "../db/schema.js";
+import { assets, models, tasks } from "../db/schema.js";
 import type { InProcessQueue } from "../engine/queue.js";
 import { getTaskView, runTask } from "../engine/runner.js";
 import type { ProviderAdapter } from "../providers/base.js";
@@ -13,6 +15,19 @@ export interface TasksDeps {
   queue: InProcessQueue;
   provider: ProviderAdapter;
   persist: () => void;
+  storageDir: string;
+}
+
+function unlinkIfUnreferenced(deps: TasksDeps, url: string): void {
+  if (!url.startsWith("/static/")) return;
+  const remaining = deps.db.select().from(assets).where(eq(assets.url, url)).all().length;
+  if (remaining > 0) return;
+  const file = path.join(deps.storageDir, url.replace("/static/", ""));
+  try {
+    fs.unlinkSync(file);
+  } catch {
+    /* 文件不存在忽略 */
+  }
 }
 
 export function tasksRoute(app: FastifyInstance, deps: TasksDeps): void {
@@ -64,6 +79,20 @@ export function tasksRoute(app: FastifyInstance, deps: TasksDeps): void {
   app.get("/api/tasks", async () => {
     const rows = deps.db.select().from(tasks).orderBy(desc(tasks.createdAt)).all();
     return { tasks: rows.map((r) => getTaskView(deps.db, r.id)).filter((v): v is NonNullable<typeof v> => v !== null) };
+  });
+
+  app.delete("/api/tasks/:id", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const row = deps.db.select().from(tasks).where(eq(tasks.id, id)).all()[0];
+    if (!row) {
+      return reply.status(404).send({ code: "TASK_NOT_FOUND", message: `任务不存在: ${id}`, requestId: request.id });
+    }
+    const assetRows = deps.db.select().from(assets).where(eq(assets.taskId, id)).all();
+    deps.db.delete(assets).where(eq(assets.taskId, id)).run();
+    deps.db.delete(tasks).where(eq(tasks.id, id)).run();
+    for (const a of assetRows) unlinkIfUnreferenced(deps, a.url);
+    deps.persist();
+    return { ok: true };
   });
 
   app.get("/api/tasks/:id", async (request, reply) => {

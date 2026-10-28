@@ -26,6 +26,8 @@ export const api = {
   tasks: () => request<{ tasks: TaskView[] }>("/tasks"),
   assets: (type?: string) =>
     request<{ assets: AssetView[] }>(`/assets${type ? `?type=${encodeURIComponent(type)}` : ""}`),
+  deleteTask: (id: string) => request<{ ok: true }>(`/tasks/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  deleteAsset: (id: string) => request<{ ok: true }>(`/assets/${encodeURIComponent(id)}`, { method: "DELETE" }),
   upload: async (file: File): Promise<{ url: string }> => {
     const form = new FormData();
     form.append("file", file);

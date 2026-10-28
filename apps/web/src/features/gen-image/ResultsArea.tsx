@@ -29,6 +29,12 @@ export function ResultsArea({ onEdit }: { onEdit: (task: TaskView) => void }) {
   const typeOf = (t: TaskView) => modelOf(t)?.type ?? "image";
   const tasks = (data?.tasks ?? []).filter((t) => (filter === "all" ? true : typeOf(t) === filter));
 
+  async function removeTask(task: TaskView) {
+    await api.deleteTask(task.id);
+    await queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    await queryClient.invalidateQueries({ queryKey: ["assets"] });
+  }
+
   async function resubmit(task: TaskView) {
     await api.createTask({
       modelKey: task.modelKey,
@@ -63,7 +69,7 @@ export function ResultsArea({ onEdit }: { onEdit: (task: TaskView) => void }) {
       ) : (
         <div className="space-y-4 px-6 pb-8">
           {tasks.map((t) => (
-            <TaskCard key={t.id} task={t} model={modelOf(t)} onRegenerate={(x) => void resubmit(x)} onEdit={onEdit} />
+            <TaskCard key={t.id} task={t} model={modelOf(t)} onRegenerate={(x) => void resubmit(x)} onEdit={onEdit} onDelete={(x) => void removeTask(x)} />
           ))}
         </div>
       )}

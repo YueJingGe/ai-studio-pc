@@ -72,6 +72,16 @@ describe("tasks integration (mock provider)", () => {
     const assets = (assetsRes.json() as { assets: unknown[] }).assets;
     expect(assets).toHaveLength(2);
 
+    // 删除任务 → 任务与资产同时消失
+    const del = await app.inject({ method: "DELETE", url: `/api/tasks/${task.id}` });
+    expect(del.statusCode).toBe(200);
+    const afterDel = await app.inject({ method: "GET", url: "/api/tasks" });
+    expect((afterDel.json() as { tasks: unknown[] }).tasks).toHaveLength(0);
+    const assetsAfterDel = await app.inject({ method: "GET", url: "/api/assets?type=image" });
+    expect((assetsAfterDel.json() as { assets: unknown[] }).assets).toHaveLength(0);
+    const del404 = await app.inject({ method: "DELETE", url: `/api/tasks/${task.id}` });
+    expect(del404.statusCode).toBe(404);
+
     // 校验失败信封
     const bad = await app.inject({ method: "POST", url: "/api/tasks", payload: { modelKey: "", prompt: "" } });
     expect(bad.statusCode).toBe(400);

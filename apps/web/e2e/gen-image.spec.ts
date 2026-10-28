@@ -31,4 +31,8 @@ test("图片生成全链路（mock provider）", async ({ page }) => {
   await expect(card.getByText("已成功", { exact: true })).toBeVisible({ timeout: 15000 });
   await expect(card.getByRole("img").first()).toBeVisible();
   await expect(card.getByRole("link", { name: "下载" })).toBeVisible();
+
+  // 删除功能：任务卡与资产同时消失
+  await card.getByLabel("删除").click();
+  await expect(card).toHaveCount(0);
 });

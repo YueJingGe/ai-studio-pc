@@ -65,8 +65,8 @@ export async function buildApp(deps: AppDeps) {
 
   app.get("/api/health", async () => ({ ok: true, provider: deps.provider.name }));
   modelsRoute(app, deps.db);
-  tasksRoute(app, deps);
-  assetsRoute(app, deps.db);
+  tasksRoute(app, { ...deps, storageDir: deps.env.STORAGE_DIR });
+  assetsRoute(app, deps.db, deps.env.STORAGE_DIR, deps.persist);
   uploadsRoute(app, deps.env.STORAGE_DIR);
 
   return app;
